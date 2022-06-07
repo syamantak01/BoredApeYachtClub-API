@@ -398,3 +398,10 @@ After deploying it, we can see the playground. (Access the playground from [The 
 ![image](https://user-images.githubusercontent.com/58560802/172486646-fe3d2bed-dcd7-40a9-b54c-5543dc932159.png)
 
 ## Querying Data
+
+
+## References
+
+- https://thegraph.com/docs/en/
+- https://youtu.be/VRK17Ai33Dw
+- https://youtu.be/Y-4Rf6OX3YM

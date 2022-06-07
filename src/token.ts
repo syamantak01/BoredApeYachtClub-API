@@ -1,53 +1,104 @@
 import {
-  Approval as ApprovalEvent,
-  ApprovalForAll as ApprovalForAllEvent,
-  OwnershipTransferred as OwnershipTransferredEvent,
-  Transfer as TransferEvent
+    Token as TokenContract, //to talk to the token contract
+    Transfer as TransferEvent //To get the proper types to interact with the contract
 } from "../generated/Token/Token"
+
+//importing APIs to talk to the graph node
 import {
-  Approval,
-  ApprovalForAll,
-  OwnershipTransferred,
-  Transfer
-} from "../generated/schema"
+    Token, User
+} from '../generated/schema'
 
-export function handleApproval(event: ApprovalEvent): void {
-  let entity = new Approval(
-    event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  )
-  entity.owner = event.params.owner
-  entity.approved = event.params.approved
-  entity.tokenId = event.params.tokenId
-  entity.save()
-}
+import { ipfs, json, JSONValue } from '@graphprotocol/graph-ts'
 
-export function handleApprovalForAll(event: ApprovalForAllEvent): void {
-  let entity = new ApprovalForAll(
-    event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  )
-  entity.owner = event.params.owner
-  entity.operator = event.params.operator
-  entity.approved = event.params.approved
-  entity.save()
-}
+let ipfsHash = "QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq"
 
-export function handleOwnershipTransferred(
-  event: OwnershipTransferredEvent
-): void {
-  let entity = new OwnershipTransferred(
-    event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  )
-  entity.previousOwner = event.params.previousOwner
-  entity.newOwner = event.params.newOwner
-  entity.save()
-}
-
+//handleTransfer is the actual resolver that is going to be executed when the transfer event is emitted
 export function handleTransfer(event: TransferEvent): void {
-  let entity = new Transfer(
-    event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  )
-  entity.from = event.params.from
-  entity.to = event.params.to
-  entity.tokenId = event.params.tokenId
-  entity.save()
+
+    //load some token id from the event parameters
+    let token = Token.load(event.params.tokenId.toString());
+
+    //if token doesnt exist, meaning the first time the token is created
+    if (!token) {
+        //Create the token
+        token = new Token(event.params.tokenId.toString());
+        token.tokenID = event.params.tokenId;
+        token.createdAtTimestamp = event.block.timestamp;
+
+        token.tokenURI = "/" + event.params.tokenId.toString()
+
+        let metadata = ipfs.cat(ipfsHash + token.tokenURI);
+
+        if (metadata) {
+            const value = json.fromBytes(metadata).toObject();
+            if (value) {
+                const image = value.get('image');
+                if (image) {
+                    token.image = image.toString();
+                }
+            }
+
+            //next we get the attributes which will have trait_type and value and we get thsese properties and assign them
+            let attributes: JSONValue[];
+            let atts = value.get('attributes');
+            if (atts) {
+                attributes = atts.toArray();
+
+
+                for (let i = 0; i < attributes.length; i++) {
+                    let item = attributes[i].toObject();
+                    let trait: string;
+                    let t = item.get('trait_type');
+
+                    if (t) {
+                        trait = t.toString();
+
+                        let value: string
+                        let v = item.get('value');
+                        if (v) {
+                            value = v.toString()
+                            if (trait == "Mouth") {
+                                token.mouth = value;
+                            }
+
+                            if (trait == "Eyes") {
+                                token.eyes = value;
+                            }
+
+                            if (trait == "Background") {
+                                token.background = value;
+                            }
+
+                            if (trait == "Hat") {
+                                token.hat = value;
+                            }
+
+                            if (trait == "Clothes") {
+                                token.clothes = value;
+                            }
+
+                            if (trait == "Fur") {
+                                token.fur = value;
+                            }
+
+                            if (trait == "Earring") {
+                                token.earring = value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    token.owner = event.params.to.toHexString();
+    token.save();
+
+    let user = User.load(event.params.to.toHexString());
+    if (!user) {
+        user = new User(event.params.to.toHexString());
+        user.save();
+    }
 }
+

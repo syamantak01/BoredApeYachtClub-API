@@ -1,6 +1,6 @@
 # Bored Ape Yacht Club NFT API
 
-This project involves building subgraph for querying NFT data from the [Bored-Ape-Yatch-Club](https://etherscan.io/address/0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D) smart contract, implementing queries for fetching NFTs as well as their owners, building relationships between them, full text search, sorting, and filtering.
+This project involves building subgraph for querying NFT data from the [Bored-Ape-Yatch-Club](https://etherscan.io/address/0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D) smart contract, implementing queries for fetching NFTs as well as their owners, image, time when they were created, searching, filtering and sorting.
 
 ## Initialisation
 
@@ -18,11 +18,7 @@ This project involves building subgraph for querying NFT data from the [Bored-Ap
 1. Install the Graph CLI:
 
     ```bash
-    $ npm install -g @graphprotocol/graph-cli
-
-    # or
-
-    $ yarn global add @graphprotocol/graph-cli
+    ❯ yarn global add @graphprotocol/graph-cli  
     ```
 
 2. Once the Graph CLI has been installed you can initialize a new subgraph with the Graph CLI `init` command.
@@ -124,7 +120,7 @@ type Token @entity{
   eyes: String
   clothes: String
   earring: String
-  createdAtTimestamp: BigInt!
+  createdAtTimestamp: String!
 }
 
 type User @entity {
@@ -146,7 +142,7 @@ type _Schema_
   )
 ```
 
->### On Relationships via `@derivedFrom` (from the docs)
+>### About `@derivedFrom`
 >
 >- Reverse lookups can be defined on an entity through the `@derivedFrom` field. This creates a virtual field on the entity that may be queried but cannot be set manually through the mappings API. Rather, it is derived from the relationship defined on the other entity. For such relationships, it rarely makes sense to store both sides of the relationship, and both indexing and query performance will be better when only one side is stored and the other is derived.
 >- For one-to-many relationships, the relationship should always be stored on the 'one' side, and the 'many' side should always be derived. Storing the relationship this way, rather than storing an array of entities on the 'many' side, will result in dramatically better performance for both indexing and querying the subgraph. In general, storing arrays of entities should be avoided as much as is practical.
@@ -236,7 +232,9 @@ export function handleTransfer(event: TransferEvent): void {
         //Create the token
         token = new Token(event.params.tokenId.toString());
         token.tokenID = event.params.tokenId;
-        token.createdAtTimestamp = event.block.timestamp;
+
+        var blockTimestamp = new Date(event.block.timestamp.toI64() * 1000);
+        token.createdAtTimestamp = blockTimestamp.toString();
 
         token.tokenURI = "/" + event.params.tokenId.toString()
 
@@ -247,7 +245,8 @@ export function handleTransfer(event: TransferEvent): void {
             if (value) {
                 const image = value.get('image');
                 if (image) {
-                    token.image = image.toString();
+                    let image_hash = image.toString().split("ipfs://")[1]
+                    token.image = "ipfs.io/ipfs/" + image_hash
                 }
             }
 
@@ -399,9 +398,359 @@ After deploying it, we can see the playground. (Access the playground from [The 
 
 ## Querying Data
 
+1. ```graphql
+    {
+        tokens(first: 5) {
+            id
+            tokenID
+            tokenURI
+            image
+            createdAtTimestamp
+            owner {
+                id
+            }
+        }
+        users(first: 5) {
+            id
+            tokens {
+                id
+            }
+        }
+    }
+    ```
+
+Result of this query is:
+
+```json
+{
+    "data": {
+        "tokens": [
+            {
+                "id": "0",
+                "tokenID": "0",
+                "tokenURI": "/0",
+                "image": "ipfs.io/ipfs/QmRRPWG96cmgTn2qSzjwr2qvfNEuhunv6FNeMFGa9bx6mQ",
+                "owner": {
+                    "id": "0xf7801b8115f3fe46ac55f8c0fdb5243726bdb66a"
+                }
+            },
+            {
+                "id": "1",
+                "tokenID": "1",
+                "tokenURI": "/1",
+                "image": "ipfs.io/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
+                "owner": {
+                    "id": "0x46efbaedc92067e6d60e84ed6395099723252496"
+                }
+            },
+            {
+                "id": "10",
+                "tokenID": "10",
+                "tokenURI": "/10",
+                "image": "ipfs.io/ipfs/QmPQdVU1riwzijhCs1Lk6CHmDo4LpmwPPLuDauY3i8gSzL",
+                "owner": {
+                    "id": "0xaba7161a7fb69c88e16ed9f455ce62b791ee4d03"
+                }
+            },
+            {
+                "id": "100",
+                "tokenID": "100",
+                "tokenURI": "/100",
+                "image": "ipfs.io/ipfs/QmTXuAUW4nLqRZ8NCbEaH8tPSYVhqq3hPTYbnqx8p97Yi7",
+                "owner": {
+                    "id": "0x35f0686c63f50707ea3b5bace186938e4e19f03a"
+                }
+            },
+            {
+                "id": "1000",
+                "tokenID": "1000",
+                "tokenURI": "/1000",
+                "image": "ipfs.io/ipfs/QmS8s3b1g6gUM83QRTkPD7LFYmVPxhpNgbtvbhvTAk5uJk",
+                "owner": {
+                    "id": "0xef8e27bad0f2eee4e691e5b1eaab3c019e369557"
+                }
+            }
+        ],
+        "users": [
+            {
+                "id": "0x001aba7087f49a135ffb121a40684416824e9c34",
+                "tokens": [
+                    {
+                        "id": "1120"
+                    },
+                    {
+                        "id": "1122"
+                    },
+                    {
+                        "id": "1123"
+                    },
+                    {
+                        "id": "2541"
+                    },
+                    {
+                        "id": "2542"
+                    },
+                    {
+                        "id": "4684"
+                    }
+                ]
+            },
+            {
+                "id": "0x003f35595dce3187b4fff2b5a2c4303f7158208a",
+                "tokens": [
+                    {
+                        "id": "6598"
+                    },
+                    {
+                        "id": "6599"
+                    },
+                    {
+                        "id": "6600"
+                    },
+                    {
+                        "id": "6727"
+                    },
+                    {
+                        "id": "6728"
+                    },
+                    {
+                        "id": "6729"
+                    },
+                    {
+                        "id": "7333"
+                    },
+                    {
+                        "id": "7334"
+                    },
+                    {
+                        "id": "7335"
+                    }
+                ]
+            },
+            {
+                "id": "0x00668bd79ede077b99bbe1c4db59418bc333d4cf",
+                "tokens": [
+                    {
+                        "id": "773"
+                    },
+                    {
+                        "id": "774"
+                    },
+                    {
+                        "id": "775"
+                    },
+                    {
+                        "id": "776"
+                    },
+                    {
+                        "id": "777"
+                    }
+                ]
+            },
+            {
+                "id": "0x0080c6db0eb694bcb00dd46220834adbe7f83189",
+                "tokens": [
+                    {
+                        "id": "1358"
+                    },
+                    {
+                        "id": "4978"
+                    }
+                ]
+            },
+            {
+                "id": "0x00b6a1928719ab1fc75eb062d87a5a1f28ba8551",
+                "tokens": [
+                    {
+                        "id": "1256"
+                    },
+                    {
+                        "id": "2203"
+                    },
+                    {
+                        "id": "2561"
+                    },
+                    {
+                        "id": "5446"
+                    }
+                ]
+            }
+        ]
+    }
+}        
+```
+
+2. ```graphql
+    {
+        tokens(first: 5) {
+            id
+            tokenID
+            tokenURI
+            image
+            background
+            mouth
+            hat
+            fur
+            eyes
+            clothes
+            earring
+            owner {
+                id
+            }
+        }
+    }
+    ```
+
+Result of the query is:
+
+```json
+    {
+    "data": {
+        "tokens": [
+            {
+                "id": "0",
+                "tokenID": "0",
+                "tokenURI": "/0",
+                "image": "ipfs.io/ipfs/QmRRPWG96cmgTn2qSzjwr2qvfNEuhunv6FNeMFGa9bx6mQ",
+                "background": "Orange",
+                "mouth": "Discomfort",
+                "hat": null,
+                "fur": "Robot",
+                "eyes": "X Eyes",
+                "clothes": "Striped Tee",
+                "earring": "Silver Hoop",
+                "owner": {
+                    "id": "0xf7801b8115f3fe46ac55f8c0fdb5243726bdb66a"
+                }
+            },
+            {
+                "id": "1",
+                "tokenID": "1",
+                "tokenURI": "/1",
+                "image": "ipfs.io/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
+                "background": "Orange",
+                "mouth": "Grin",
+                "hat": null,
+                "fur": "Robot",
+                "eyes": "Blue Beams",
+                "clothes": "Vietnam Jacket",
+                "earring": null,
+                "owner": {
+                    "id": "0x46efbaedc92067e6d60e84ed6395099723252496"
+                }
+            },
+            {
+                "id": "10",
+                "tokenID": "10",
+                "tokenURI": "/10",
+                "image": "ipfs.io/ipfs/QmPQdVU1riwzijhCs1Lk6CHmDo4LpmwPPLuDauY3i8gSzL",
+                "background": "Aquamarine",
+                "mouth": "Bored",
+                "hat": "Bayc Hat Red",
+                "fur": "Dmt",
+                "eyes": "Eyepatch",
+                "clothes": "Navy Striped Tee",
+                "earring": null,
+                "owner": {
+                    "id": "0xc883a79e8e4594c4f89434edb754a10da2311139"
+                }
+            },
+            {
+                "id": "100",
+                "tokenID": "100",
+                "tokenURI": "/100",
+                "image": "ipfs.io/ipfs/QmTXuAUW4nLqRZ8NCbEaH8tPSYVhqq3hPTYbnqx8p97Yi7",
+                "background": "Yellow",
+                "mouth": "Bored Cigarette",
+                "hat": "Party Hat 2",
+                "fur": "Dark Brown",
+                "eyes": "Wide Eyed",
+                "clothes": null,
+                "earring": null,
+                "owner": {
+                    "id": "0x50faff505981949e2bab7ae447a9e5dbf0ec3a92"
+                }
+            },
+            {
+                "id": "1000",
+                "tokenID": "1000",
+                "tokenURI": "/1000",
+                "image": "ipfs.io/ipfs/QmS8s3b1g6gUM83QRTkPD7LFYmVPxhpNgbtvbhvTAk5uJk",
+                "background": "Aquamarine",
+                "mouth": "Phoneme  ooo",
+                "hat": "Prussian Helmet",
+                "fur": "Brown",
+                "eyes": "Hypnotized",
+                "clothes": "Toga",
+                "earring": null,
+                "owner": {
+                    "id": "0x8bbc693d042cea740e4ff01d7e0efb36110c36bf"
+                }
+            }
+        ]
+    }
+}
+```
+
+3. Search for a specific word with *apeSearch function*
+
+```graphql
+{
+  apeSearch(text: "Bored"){
+    id
+    background
+    mouth
+    hat
+    fur
+    eyes
+    clothes
+    earring
+  }
+}
+```
+
+4. For filtering we can query as follows:
+
+```graphql
+{
+  tokens(where:{
+    eyes_in: ["Cyborg", "Robot"]
+  }){
+    id
+    background
+    mouth
+    hat
+    fur
+    eyes
+    clothes
+    earring
+  }
+}
+```
+
+5. For sorting, we can query as follows:
+
+```graphql
+{
+  tokens(
+    first: 5
+    orderDirection: desc
+    orderBy: mouth
+  ) {
+    id
+    background
+    mouth
+    hat
+    fur
+    eyes
+    clothes
+    earring
+  }
+}
+```
 
 ## References
 
-- https://thegraph.com/docs/en/
-- https://youtu.be/VRK17Ai33Dw
-- https://youtu.be/Y-4Rf6OX3YM
+- <https://thegraph.com/docs/en/>
+- <https://youtu.be/VRK17Ai33Dw>
+- <https://youtu.be/Y-4Rf6OX3YM>

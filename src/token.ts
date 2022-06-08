@@ -8,6 +8,7 @@ import {
     Token, User
 } from '../generated/schema'
 
+
 import { ipfs, json, JSONValue } from '@graphprotocol/graph-ts'
 
 let ipfsHash = "QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq"
@@ -23,7 +24,9 @@ export function handleTransfer(event: TransferEvent): void {
         //Create the token
         token = new Token(event.params.tokenId.toString());
         token.tokenID = event.params.tokenId;
-        token.createdAtTimestamp = event.block.timestamp;
+
+        var blockTimestamp = new Date(event.block.timestamp.toI64() * 1000);
+        token.createdAtTimestamp = blockTimestamp.toString();
 
         token.tokenURI = "/" + event.params.tokenId.toString()
 
@@ -34,7 +37,8 @@ export function handleTransfer(event: TransferEvent): void {
             if (value) {
                 const image = value.get('image');
                 if (image) {
-                    token.image = image.toString();
+                    let image_hash = image.toString().split("ipfs://")[1]
+                    token.image = "ipfs.io/ipfs/" + image_hash
                 }
             }
 
